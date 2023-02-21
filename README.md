@@ -1,5 +1,6 @@
 # comp-img-project
 Computationally restores images dispersed by optical prism.
+The project is based on the work of Yixuan Shao from Stanford. Their github repo is at: https://github.com/Yixuan-Shao/Hyperspectral-Image-Reconstruction
 
 
 ## Relevant links
