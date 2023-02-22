@@ -5,10 +5,8 @@
 # This code mostly comes from:
 # https://letmaik.github.io/rawpy/api/rawpy.RawPy.html
 
-from PIL import Image
+# import numpy as np
 import rawpy
-import imageio
-from matplotlib import pyplot as plt
 
 def returnNumpyFromNEF(nefLocation):
   # Read the raw image and its metadata into the software
@@ -18,47 +16,74 @@ def returnNumpyFromNEF(nefLocation):
   
   return numpyImg
 
+# Get the minimum and maximum pixel values for a numpy image
+def getMinMaxPixelValues(numpyImg):
+  min_pixel_value = numpyImg.min()
+  max_pixel_value = numpyImg.max()
+
+  return min_pixel_value, max_pixel_value
+
+# Get the metadata from a raw image using rawpy
+def printMetadata(rawImg):
+  # Descriptive comments in this section are mostly from https://letmaik.github.io/rawpy/api/rawpy.RawPy.html
+
+  # Raw Type (the type of raw image we are working with)
+  rawType = rawImg.raw_type
+  print(rawType)
+  
+  # Raw Pattern
+  # The smallest possible Bayer pattern of this image. Only usable for flat RAW images.
+  if rawType.name == 'Flat':
+    print()
+    print('The smallest possible Bayer pattern for this image is:')
+    print(rawImg.raw_pattern)
+  else:
+    print(f'raw_pattern can only be used on flat RAW images. This images is format: {rawType.name}')
+
+  # Color Description
+  # String description of colors numbered from 0 to 3 (RGBG,RGBE,GMCY, or GBTG). 
+  # Note that same letters may not refer strictly to the same color. There are cameras with two different greens for example.
+  print()
+  print('String description of colors numbered from 0 to 3 (RGBG,RGBE,GMCY, or GBTG).')
+  print('Note that same letters may not refer strictly to the same color. There are cameras with two different greens for example.')
+  print()
+  print(f'Color description is: {rawImg.color_desc}')
+  
+  # Raw Colors
+  # An array of color indices for each pixel in the RAW image. 
+  # Equivalent to calling raw_color(y,x) for each pixel. Only usable for flat RAW images (see raw_type property).
+  # Each pixel will either be red, green, or blue (Often there are 2 greens)
+  if rawType.name == 'Flat':
+    print()
+    print('The color indices for each pixel in the RAW image.')
+    print(rawImg.raw_colors)
+  else:
+    print(f'raw_colors can only be used on flat RAW images. This images is format: {rawType.name}')
+
+
+  
 
 # if __name__ == "__main__":
-def testing():
+def readRawImg():
   imgLocation = 'DSC_5875.NEF'
   
-  # Read the raw image file into the software
-  rawImg = rawpy.imread(imgLocation)
+  # Read the raw image file into the software using rawpy
+  # The "with" format closes the file automatically releases access when finished.
+  with rawpy.imread(imgLocation) as rawImg:
+    printMetadata(rawImg)
 
-  try:
-    thumb = rawImg.extract_thumb()
-  except rawpy.LibRawNoThumbnailError:
-    print('no thumbnail found')
-  except rawpy.LibRawUnsupportedThumbnailError:
-    print('unsupported thumbnail')
-  else:
-    if thumb.format == rawpy.ThumbFormat.JPEG:
-      with open('thumb.jpg', 'wb') as f:
-        f.write(thumb.data)
-    elif thumb.format == rawpy.ThumbFormat.BITMAP:
-      imageio.imsave('thumb.tiff', thumb.data)
 
-  # Get some data from the raw image
-  # Raw image data in numpy format
-  numpyImg = rawImg.raw_image
-  print(numpyImg)
-  print(f'Image dimensions: {numpyImg.shape}')
+  # try:
+  #   thumb = rawImg.extract_thumb()
+  # except rawpy.LibRawNoThumbnailError:
+  #   print('no thumbnail found')
+  # except rawpy.LibRawUnsupportedThumbnailError:
+  #   print('unsupported thumbnail')
+  # else:
+  #   if thumb.format == rawpy.ThumbFormat.JPEG:
+  #     with open('thumb.jpg', 'wb') as f:
+  #       f.write(thumb.data)
+  #   elif thumb.format == rawpy.ThumbFormat.BITMAP:
+  #     imageio.imsave('thumb.tiff', thumb.data)
 
-  # Black level per channel
-  print(f'Black levels per channel: {rawImg.black_level_per_channel}')
-
-  # Print the number of colors in the image
-  print(f'Number of colors in image: {rawImg.num_colors}')
-  print(rawImg.raw_type)
-
-  # Raw data in default cmap mode
-  plt.axis('off')
-  plt.title('Rawpy test of raw image data')
-  plt.imshow(numpyImg)
-  plt.show()
-
-  # Output to normal rgb using postprocess
-  processedImg = rawImg.postprocess()
-  plt.imshow(processedImg)
-  plt.show()
+readRawImg()
