@@ -33,18 +33,18 @@ def printMetadata(rawImg):
   
   # Raw Pattern
   # The smallest possible Bayer pattern of this image. Only usable for flat RAW images.
-  if rawType.name == 'Flat':
-    print()
+  print()
+  if rawType.name != 'Flat':
+    print(f'raw_pattern can only be used on flat RAW images. This images is format: {rawType.name}')
+  else:
     print('The smallest possible Bayer pattern for this image is:')
     print(rawImg.raw_pattern)
-  else:
-    print(f'raw_pattern can only be used on flat RAW images. This images is format: {rawType.name}')
 
   # Color Description
-  # String description of colors numbered from 0 to 3 (RGBG,RGBE,GMCY, or GBTG). 
+  # String description of colors numbered from 0 to 3 (RGBG,RGBE,GMCY, or GBTG).
   # Note that same letters may not refer strictly to the same color. There are cameras with two different greens for example.
   print()
-  print('String description of colors numbered from 0 to 3 (RGBG,RGBE,GMCY, or GBTG).')
+  print('String description of colors numbered from 0 to 3 (RGBG,RGBE,GMCY, or GBTG) used in the Bayer pattern of the camera.')
   print('Note that same letters may not refer strictly to the same color. There are cameras with two different greens for example.')
   print()
   print(f'Color description is: {rawImg.color_desc}')
@@ -53,19 +53,23 @@ def printMetadata(rawImg):
   # An array of color indices for each pixel in the RAW image. 
   # Equivalent to calling raw_color(y,x) for each pixel. Only usable for flat RAW images (see raw_type property).
   # Each pixel will either be red, green, or blue (Often there are 2 greens)
-  if rawType.name == 'Flat':
-    print()
+  print()
+  if rawType.name != 'Flat':
+    print(f'raw_colors can only be used on flat RAW images. This images is format: {rawType.name}')
+  else:
     print('The color indices for each pixel in the RAW image.')
     print(rawImg.raw_colors)
-  else:
-    print(f'raw_colors can only be used on flat RAW images. This images is format: {rawType.name}')
 
-
+  # Color Matrix
+  # read from file for some cameras, calculated for others.
+  print()
+  print('The color matrix for this image is:')
+  print(rawImg.color_matrix)
   
 
 # if __name__ == "__main__":
 def readRawImg():
-  imgLocation = 'DSC_5875.NEF'
+  imgLocation = 'DSC_5984.NEF'
   
   # Read the raw image file into the software using rawpy
   # The "with" format closes the file automatically releases access when finished.
