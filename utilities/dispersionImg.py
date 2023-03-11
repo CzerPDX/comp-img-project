@@ -4,26 +4,38 @@
 import numpy as np
 import rawpy
 import cv2
+import matplotlib.pyplot as plt
 
 
 # Takes in a rawpy-compatible Raw dispersed image
 class DispersionImg:
     def __init__(self, imgLocation):
-        self.imgError = False
-        self.imgLocation = imgLocation
-        self.rawImg = None
-        self.rawType = None
-        self.parameters = None
-        self.processedImg = None
-        self.maxDimensionPx = 512
+        self.imgError = None            # Whether or not there is an error in the image processing process
+        self.imgLocation = None         # Image location on the computer
+        self.rawImg = None              # Raw image as numpy array
+        self.parameters = None          # Parameters taken from rawpy object
+        self.processedImg = None        # Processed image from RAW image (often creates RGB) as numpy array
+        self.smallerImg = None          # Smaller image for processing easier as numpy array
+        self.maxDimensionPx = 600       # Max in either dimension for smaller image
 
-        # Save image location information
+        # Save image information
         self.resetImg(imgLocation)
+
+    # Displays a window with the smaller version of the processed image in it
+    def displaySmallerImg(self):
+        if self.smallerImg is None:
+            print('Error! Cannot display smaller image as it has not been generated')
+        else:
+            plt.imshow(self.smallerImg)
+            plt.title(f'Smaller processed image: {self.smallerImg.shape}')
+            plt.show()
         
-    # Overwrites class object data with that at the imgLocation if the 
+    # Overwrites class object data with that at the imgLocation if valid
     def resetImg(self, imgLocation):
+        self.imgError = False
         print()
         print(f'Loading image information at location: {imgLocation}')
+        self.imgLocation = imgLocation
         try:
             # Open the raw image. It will close on its own after going out of scope due to the "with"
             # Get information about the image
@@ -54,10 +66,10 @@ class DispersionImg:
                 self.processedImg = rawImg.postprocess()
 
                 # Make a smaller image to work with, if either dimension is larger than 512 pixels
-                self.reduceProcessedImg(self.maxDimensionPx)
-            
-            # Print image information to terminal to confirm initialization to user
-            self.printImageInformation()
+                self.smallerImg = self.__reduceProcessedImg()
+
+            if self.imgError is False:
+                print('Image data successfully Loaded!')
 
         except Exception as err:
             print(f'Error! Unable to load image information: {err}')
@@ -65,7 +77,7 @@ class DispersionImg:
 
     # Prints all the information gathered from the image to the terminal.
     def printImageInformation(self):
-        if self.imgError != True:
+        if self.imgError is False:
             # Image dimensions
             print()
             print(f'Raw Image Dimensions: {self.rawImg.shape}')
@@ -82,29 +94,29 @@ class DispersionImg:
 
     # Returns a reduced-size image if the image is larger than the maxPixelSize
     # Otherwise just points to the original processed image
-    def reduceProcessedImg(self, maxPixelSize):
-        # Point to the original processed image and set initial height and width values
-        self.smallerImg = self.processedImg
+    def __reduceProcessedImg(self):
+        # Point to the original processed image and set initial height and width value
         height = self.processedImg.shape[0]
         width = self.processedImg.shape[1]
 
-        # Only resize if the image is larger than the max pixel size for the smallest version
-        if (height > maxPixelSize) or (width > maxPixelSize):
-            # Set new height and width sizes
-            if height > width:
-                width = int(width * (maxPixelSize/height))
-                height = maxPixelSize
-            else:
-                height = int(height * (maxPixelSize/width))
-                width = maxPixelSize
+        # Reduce by 1/2 until under maxPixelSize to help there be less artifacting
+        while (height > self.maxDimensionPx) or (width > self.maxDimensionPx):
+            height = int(height * 0.5)
+            width = int(width * 0.5)
 
-            # Resize the image using openCV
-            self.smallerImg = cv2.resize(self.processedImg, (height, width), interpolation=cv2.INTER_AREA)
+        # Return the resized image using openCV
+        return cv2.resize(self.processedImg, (width, height), interpolation=cv2.INTER_AREA)
 
+
+    
+    
 
 
 imgLocation = 'img\\DSC_5984.NEF'
 dispersedNEF = DispersionImg(imgLocation)
+# dispersedNEF.printImageInformation()
+dispersedNEF.displaySmallerImg()
+
 
 
 
