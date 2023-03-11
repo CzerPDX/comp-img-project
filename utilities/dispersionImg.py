@@ -21,6 +21,9 @@ class DispersionImg:
         # Save image information
         self.resetImg(imgLocation)
 
+
+    # Public Methods ###############################
+
     # Displays a window with the smaller version of the processed image in it
     def displaySmallerImg(self):
         if self.smallerImg is None:
@@ -92,6 +95,9 @@ class DispersionImg:
         else:
             print('Error! Unable to print image information as there was an error when loading this image has not been properly loaded')
 
+
+    # Private Methods ################################
+
     # Returns a reduced-size image if the image is larger than the maxPixelSize
     # Otherwise just points to the original processed image
     def __reduceProcessedImg(self):
@@ -106,30 +112,3 @@ class DispersionImg:
 
         # Return the resized image using openCV
         return cv2.resize(self.processedImg, (width, height), interpolation=cv2.INTER_AREA)
-
-
-    
-    
-
-
-imgLocation = 'img\\DSC_5984.NEF'
-dispersedNEF = DispersionImg(imgLocation)
-# dispersedNEF.printImageInformation()
-dispersedNEF.displaySmallerImg()
-
-
-
-
-# def rawToNumpy(rawImgLocation):
-#     # Open the RAW image. Using "with" closes the file after
-#     with rawpy.imread(rawImgLocation) as rawImg:
-#         rawNumpy = rawImg.raw_image.copy()
-
-#         return rawNumpy
-
-# def tifToNumpy(imgLocation):
-#     # Load TIF
-#     tifImg = Image.open(imgLocation)
-#     # Convert to RGB
-#     rgbImg = tifImg.convert('RGB')
-#     return (np.asarray(rgbImg))
