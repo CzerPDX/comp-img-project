@@ -1,5 +1,6 @@
-# References
-# https://towardsdatascience.com/raw-image-processing-in-python-238e5d582761
+# This file is for the DispersionImg class
+# The DispersionImg class takes in a rawpy-compatible Raw image dispersed by a prism
+# It then gathers and manages the initial information and processes it and then attempts to undisperse the image
 
 import numpy as np
 import rawpy
@@ -33,7 +34,7 @@ class DispersionImg:
             plt.title(f'Smaller processed image: {self.smallerImg.shape}')
             plt.show()
         
-    # Overwrites class object data with that at the imgLocation if valid
+    # Overwrites class data
     def resetImg(self, imgLocation):
         self.imgError = False
         print()
@@ -101,14 +102,23 @@ class DispersionImg:
     # Returns a reduced-size image if the image is larger than the maxPixelSize
     # Otherwise just points to the original processed image
     def __reduceProcessedImg(self):
-        # Point to the original processed image and set initial height and width value
-        height = self.processedImg.shape[0]
-        width = self.processedImg.shape[1]
 
-        # Reduce by 1/2 until under maxPixelSize to help there be less artifacting
-        while (height > self.maxDimensionPx) or (width > self.maxDimensionPx):
-            height = int(height * 0.5)
-            width = int(width * 0.5)
+        try:
+            # Point to the original processed image and set initial height and width value
+            height = self.processedImg.shape[0]
+            width = self.processedImg.shape[1]
 
-        # Return the resized image using openCV
-        return cv2.resize(self.processedImg, (width, height), interpolation=cv2.INTER_AREA)
+            # Reduce by 1/2 until under maxPixelSize to help there be less artifacting
+            while (height > self.maxDimensionPx) or (width > self.maxDimensionPx):
+                height = int(height * 0.5)
+                width = int(width * 0.5)
+
+            # Return the resized image using openCV
+            retImg = cv2.resize(self.processedImg, (width, height), interpolation=cv2.INTER_AREA)
+            print(f'Image successfully reduced to size ({height}, {width})')
+            return retImg
+        except Exception as err:
+            raise(f'Error! Could not reduce size of processed image: {err}')
+
+
+
