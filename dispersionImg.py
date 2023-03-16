@@ -6,18 +6,20 @@ import numpy as np
 import rawpy
 import cv2
 import matplotlib.pyplot as plt
+import os
 
 
 # Takes in a rawpy-compatible Raw dispersed image
 class DispersionImg:
-    def __init__(self, imgLocation):
-        self.imgError = None            # Whether or not there is an error in the image processing process
-        self.imgLocation = None         # Image location on the computer
-        self.rawImg = None              # Raw image as numpy array
-        self.parameters = None          # Parameters taken from rawpy object
-        self.processedImg = None        # Processed image from RAW image (often creates RGB) as numpy array
-        self.smallerImg = None          # Smaller image for processing easier as numpy array
-        self.maxDimensionPx = 600       # Max in either dimension for smaller image
+    def __init__(self, imgLocation, maxDimensionPx):
+        self.imgError = None                    # Whether or not there is an error in the image processing process
+        self.imgLocation = None                 # Image location on the computer
+        self.rawImg = None                      # Raw image as numpy array
+        self.parameters = None                  # Parameters taken from rawpy object
+        self.processedImg = None                # Processed image from RAW image (often creates RGB) as numpy array
+        self.smallerImg = None                  # Smaller image for processing easier as numpy array
+        self.maxDimensionPx = maxDimensionPx    # Max in either dimension for smaller image
+        self.manuallyDemosaicedRaw = None       #Image is demosaiced manually into each channel keeping raw values
 
         # Save image information
         self.resetImg(imgLocation)
@@ -35,10 +37,14 @@ class DispersionImg:
             plt.show()
         
     # Overwrites class data
-    def resetImg(self, imgLocation):
+    def resetImg(self, imgLocationUnNormed):
         self.imgError = False
+
+        # Normalize the path for whatever operating system
+        imgLocation = os.path.normpath(imgLocationUnNormed)
         print()
         print(f'Loading image information at location: {imgLocation}')
+        
         self.imgLocation = imgLocation
         try:
             # Open the raw image. It will close on its own after going out of scope due to the "with"
@@ -71,6 +77,8 @@ class DispersionImg:
 
                 # Make a smaller image to work with, if either dimension is larger than 512 pixels
                 self.smallerImg = self.__reduceProcessedImg()
+
+                self.manuallyDemosaicedRaw = self.__manualDemosaicKeepRawData()
 
             if self.imgError is False:
                 print('Image data successfully Loaded!')
@@ -119,6 +127,22 @@ class DispersionImg:
             return retImg
         except Exception as err:
             raise(f'Error! Could not reduce size of processed image: {err}')
+        
+
+    # This method demosaics the raw data into the number of channels in the bayer pattern
+    # It does not adjust the values of any of the data.
+    def __manualDemosaicKeepRawData(self):
+        print(f'manualDemosaicKeepRawData started')
+
+
+def testDispersionImg():
+    imgLocation = 'img/DSC_5984.NEF'
+    
+    dispersedImgObj = DispersionImg(imgLocation, 512)
+
+    # Print the information about the object to the console
+    dispersedImgObj.printImageInformation()
 
 
 
+testDispersionImg()
