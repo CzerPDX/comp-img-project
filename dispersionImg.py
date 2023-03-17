@@ -31,6 +31,7 @@ class DispersionImg:
         self.rawChannels_smaller = {}           # Smaller versions of the rawChannels that makes alignment more reasonable
         self.manuallyDemosaicedRaw = None       #Image is demosaiced manually into each channel keeping raw values
         self.reductionPercent = 0.25            # Percentage to reduce the raw channels by as a float
+        self.correlationValues = {}
 
         # Save image information
         self.resetImg(imgLocation)
@@ -205,26 +206,37 @@ class DispersionImg:
                 self.rawChannels_smaller[channel] = zoom(self.rawChannels[channel], (reductionPercent, reductionPercent), order = 3)
         except Exception as err:
             raise Exception(f'Error! Failed to demosaic raw data:\n{err}')
-        
     
-    # We will try to use scipy's  correlate2d because the images will only ever be offset in one directional axis.
-    def __alignRawChannels(self):
-        # # # Find the cross-correlation between the arrays
-        # correlatedImgs = signal.correlate2d(self.channels['blue'], self.channels['red'], mode='same', boundary='fill', fillvalue=0)
-        
-        print(f'Beginning alignment of images using signal.correlate2d')
+    def __correlateChannels(self, mainChannel, secondaryChannel, secondaryChannelName):
+        correlatedImgs = np.zeros_like(mainChannel)
+        for i in tqdm(range(mainChannel.shape[0])):
+            correlatedImgs[i,:] = signal.correlate2d(mainChannel[i:i+1,:], secondaryChannel, mode='same', boundary='fill', fillvalue=0)
 
-        correlatedImgs = np.zeros_like(self.rawChannels_smaller['blue'])
-        for i in tqdm(range(self.rawChannels_smaller['blue'].shape[0])):
-            correlatedImgs[i,:] = signal.correlate2d(self.rawChannels_smaller['blue'][i:i+1,:], self.rawChannels_smaller['red'], mode='same', boundary='fill', fillvalue=0)
-
-        # Find the maximum correlation value and its position
+        # Find the maximum correlation value and its position in relation to the 
         maxCorrelationVal = np.max(correlatedImgs)
         maxCorrelationPos = np.unravel_index(np.argmax(correlatedImgs), correlatedImgs.shape)
 
+        self.correlationValues[secondaryChannelName] = (maxCorrelationVal, maxCorrelationPos)
+
+    
+    # We will try to use scipy's  correlate2d because the images will only ever be offset in one directional axis.
+    def __alignRawChannels(self):
+        # Find the cross-correlation between the arrays
+        print(f'Beginning alignment of images using signal.correlate2d')
+
+        # Correlate all positions to a single channel (I chose red for now)
+        # Correlates the blue channel to the red channel
+        print('Getting correlations for green1 channel in relation to red channel')
+        self.__correlateChannels(self.rawChannels_smaller['red'], self.rawChannels_smaller['green1'], 'green1')
+        print('Getting correlations for blue channel in relation to red channel')
+        self.__correlateChannels(self.rawChannels_smaller['red'], self.rawChannels_smaller['blue'], 'blue')
+        print('Getting correlations for green2 channel in relation to red channel')
+        self.__correlateChannels(self.rawChannels_smaller['red'], self.rawChannels_smaller['green2'], 'green2')
+
         # Display the maximum correlation value and its position
-        print('Maximum correlation value:', maxCorrelationVal)
-        print('Position of maximum correlation:', maxCorrelationPos)
+        print('Maximum correlation value and position of max correlation:')
+        for color in self.correlationValues:
+            print(f'{color}: {self.correlationValues[color]}')
 
 
 def testDispersionImg():
