@@ -4,12 +4,17 @@
 
 # References: 
 # https://numpy.org/doc/stable/reference/arrays.indexing.html#basic-slicing-and-indexing
+# https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.correlate2d.html
 
 import numpy as np
 import rawpy
 import cv2
 import matplotlib.pyplot as plt
 import os
+from scipy import signal
+from scipy import datasets
+from tqdm import tqdm
+from scipy.ndimage import zoom
 
 
 # Takes in a rawpy-compatible Raw dispersed image
@@ -20,51 +25,18 @@ class DispersionImg:
         self.rawImg = None                      # Raw image as numpy array
         self.parameters = None                  # Parameters taken from rawpy object
         self.processedImg = None                # Processed image from RAW image (often creates RGB) as numpy array
-        self.smallerImg = None                  # Smaller image for processing easier as numpy array
+        self.processedImg_smaller = None        # Smaller image for processing easier as numpy array
         self.maxDimensionPx = maxDimensionPx    # Max in either dimension for smaller image
         self.rawChannels = {}                   # Will hold the raw, unaligned input from each type of image sensor separated into 1/4 size numpy arrays
+        self.rawChannels_smaller = {}           # Smaller versions of the rawChannels that makes alignment more reasonable
         self.manuallyDemosaicedRaw = None       #Image is demosaiced manually into each channel keeping raw values
+        self.reductionPercent = 0.25            # Percentage to reduce the raw channels by as a float
 
         # Save image information
         self.resetImg(imgLocation)
 
 
-    # Public Methods ###############################
-
-    # Displays a window with the smaller version of the processed image in it
-    def displaySmallerImg(self):
-        if self.smallerImg is None:
-            print('Error! Cannot display smaller image as it has not been generated')
-        else:
-            plt.imshow(self.smallerImg)
-            plt.title(f'Smaller processed image: {self.smallerImg.shape}')
-            plt.show()
-
-    def displayRawChannels(self):
-        # Display the RAW data from each photosite
-        # Add Green2 channel to upper left to match rgbg Bayer pattern of:
-        # G2 B
-        # R G1
-        plt.suptitle(f'RAW photosite by sensor type for {self.parameters["color_desc"]} Bayer pattern', fontweight = 'bold')
-        plt.subplot(2, 2, 1)
-        plt.title('Green2')
-        plt.imshow(self.channels['green2'], cmap='Greens')
-
-        plt.subplot(2, 2, 2)
-        plt.title('Blue')
-        plt.imshow(self.channels['blue'], cmap='Blues')
-
-        plt.subplot(2, 2, 3)
-        plt.title('Red')
-        plt.imshow(self.channels['red'], cmap='Reds')
-
-        plt.subplot(2, 2, 4)
-        plt.title('Green1')
-        plt.imshow(self.channels['green1'], cmap='Greens')
-
-        plt.show() 
-        
-    # Overwrites class data
+    # Overwrites class data/Initializes class information
     def resetImg(self, imgLocationUnNormed):
         self.imgError = False
 
@@ -81,7 +53,6 @@ class DispersionImg:
 
                 # Save the raw image
                 self.rawImg = rawImg.raw_image.copy()
-
 
                 # Save the rawpy metadata
                 # Eventually this should use getattr() so it can accommodate other camers besides mine
@@ -108,10 +79,16 @@ class DispersionImg:
                 self.processedImg = rawImg.postprocess()
 
                 # Make a smaller image to work with, if either dimension is larger than 512 pixels
-                self.smallerImg = self.__reduceProcessedImg()
+                self.processedImg_smaller = self.__reduceProcessedImg()
 
                 # Separate the raw data into channels by photosite type (ie all Reds in one, Blues in another, etc...)
                 self.__manualDemosaicKeepRawData()
+
+                # Reduce the size of the demosaiced raw channels so they can be aligned more reasonably
+                self.__makeSmallerRawChannels(self.reductionPercent)
+
+                # Align the raw channels
+                self.__alignRawChannels()
 
             if self.imgError is False:
                 print('Image data successfully Loaded!')
@@ -120,6 +97,46 @@ class DispersionImg:
             print(f'Error! Unable to load image information: {err}')
             self.imgError = True
 
+
+
+
+    # Public Methods ###############################
+
+    # Displays a window with the smaller version of the processed image in it
+    def displayprocessedImg_smaller(self):
+        if self.processedImg_smaller is None:
+            print('Error! Cannot display smaller image as it has not been generated')
+        else:
+            plt.imshow(self.processedImg_smaller)
+            plt.title(f'Smaller processed image: {self.processedImg_smaller.shape}')
+            plt.show()
+
+    def displayRawChannels(self):
+        # Display the RAW data from each photosite
+        # Add Green2 channel to upper left to match rgbg Bayer pattern of:
+        # G2 B
+        # R G1
+        plt.suptitle(f'RAW photosite by sensor type for {self.parameters["color_desc"]} Bayer pattern', fontweight = 'bold')
+        plt.subplot(2, 2, 1)
+        plt.title('Green2')
+        plt.imshow(self.channels['green2'], cmap='Greens')
+
+        plt.subplot(2, 2, 2)
+        plt.title('Blue')
+        plt.imshow(self.channels['blue'], cmap='Blues')
+
+        plt.subplot(2, 2, 3)
+        plt.title('Red')
+        plt.imshow(self.channels['red'], cmap='Reds')
+
+        plt.subplot(2, 2, 4)
+        plt.title('Green1')
+        plt.imshow(self.channels['green1'], cmap='Greens')
+
+        plt.show() 
+        
+
+
     # Prints all the information gathered from the image to the terminal.
     def printImageInformation(self):
         if self.imgError is False:
@@ -127,7 +144,7 @@ class DispersionImg:
             print()
             print(f'Raw Image Dimensions: {self.rawImg.shape}')
             print(f'Processed Image Dimensions: {self.processedImg.shape}')
-            print(f'Smaller version Dimensions: {self.smallerImg.shape}')
+            print(f'Smaller version Dimensions: {self.processedImg_smaller.shape}')
             print()
             print('Raw Image Parameters:')
             for parameterName in self.parameters:
@@ -168,16 +185,46 @@ class DispersionImg:
     def __manualDemosaicKeepRawData(self):
 
         try:
-            self.channels = {}
-            self.channels['green2'] = self.rawImg[0::2, 0::2].copy()   # From every other row starting at row 0, choose every other pixel starting at 0
-            self.channels['blue'] = self.rawImg[0::2, 1::2].copy()     # From every other row starting at row 0, choose every other pixel starting at 1
-            self.channels['red'] = self.rawImg[1::2, 0::2].copy()      # From every other row starting at row 1, choose every other pixel starting at 0
-            self.channels['green1'] = self.rawImg[1::2, 1::2].copy()   # From every other row starting at row 1, choose every other pixel starting at 1
+            self.rawChannels = {}
+            self.rawChannels['green2'] = self.rawImg[0::2, 0::2].copy()   # From every other row starting at row 0, choose every other pixel starting at 0
+            self.rawChannels['blue'] = self.rawImg[0::2, 1::2].copy()     # From every other row starting at row 0, choose every other pixel starting at 1
+            self.rawChannels['red'] = self.rawImg[1::2, 0::2].copy()      # From every other row starting at row 1, choose every other pixel starting at 0
+            self.rawChannels['green1'] = self.rawImg[1::2, 1::2].copy()   # From every other row starting at row 1, choose every other pixel starting at 1
             
             print('Photosites successfully separated into their own images under "channels" object!')
 
         except Exception as err:
             raise Exception(f'Error! Failed to demosaic raw data:\n{err}')
+        
+    # Aligning the raw channels will take a million years if you don't make them smaller, unfortunately.
+    # reductionPercent should be represented as float value
+    def __makeSmallerRawChannels(self, reductionPercent):
+        print(f'Creating smaller raw channel versions for alignment')
+        try:
+            for channel in self.rawChannels:
+                self.rawChannels_smaller[channel] = zoom(self.rawChannels[channel], (reductionPercent, reductionPercent), order = 3)
+        except Exception as err:
+            raise Exception(f'Error! Failed to demosaic raw data:\n{err}')
+        
+    
+    # We will try to use scipy's  correlate2d because the images will only ever be offset in one directional axis.
+    def __alignRawChannels(self):
+        # # # Find the cross-correlation between the arrays
+        # correlatedImgs = signal.correlate2d(self.channels['blue'], self.channels['red'], mode='same', boundary='fill', fillvalue=0)
+        
+        print(f'Beginning alignment of images using signal.correlate2d')
+
+        correlatedImgs = np.zeros_like(self.rawChannels_smaller['blue'])
+        for i in tqdm(range(self.rawChannels_smaller['blue'].shape[0])):
+            correlatedImgs[i,:] = signal.correlate2d(self.rawChannels_smaller['blue'][i:i+1,:], self.rawChannels_smaller['red'], mode='same', boundary='fill', fillvalue=0)
+
+        # Find the maximum correlation value and its position
+        maxCorrelationVal = np.max(correlatedImgs)
+        maxCorrelationPos = np.unravel_index(np.argmax(correlatedImgs), correlatedImgs.shape)
+
+        # Display the maximum correlation value and its position
+        print('Maximum correlation value:', maxCorrelationVal)
+        print('Position of maximum correlation:', maxCorrelationPos)
 
 
 def testDispersionImg():
@@ -185,12 +232,7 @@ def testDispersionImg():
     
     dispersedImgObj = DispersionImg(imgLocation, 512)
 
-    dispersedImgObj.displayRawChannels()
-
-    # # Print the information about the object to the console
-    # dispersedImgObj.printImageInformation()
-
-    # print(dispersedImgObj.parameters['raw_colors'].shape)
+    # dispersedImgObj.displayRawChannels()
 
 
 
