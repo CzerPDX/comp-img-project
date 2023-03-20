@@ -12,6 +12,7 @@ import numpy as np
 import rawpy
 import cv2
 import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap
 import os
 import math
 from scipy import signal
@@ -44,6 +45,7 @@ class DispersionImg:
         self.stackedTest = None
         self.outputImgsFolder = os.path.normpath('img/v2_dispersed_output/')
         self.rawShiftAmounts = {}               # How much to shift each raw channel image
+        self.rainbowChannels = {}
 
         # Save image information
         self.resetImg(imgLocation)
@@ -154,7 +156,7 @@ class DispersionImg:
         plt.imshow(self.channels['green1'], cmap='Greens')
 
         plt.show() 
-        
+
 
 
     # Prints all the information gathered from the image to the terminal.
@@ -386,9 +388,119 @@ class DispersionImg:
             print(f'Shift channel {channelName} by {self.rawShiftAmounts[channelName]}')
             self.shiftedImgs[channelName] = self.__shiftImgs(self.rawChannels[channelName], self.rawShiftAmounts[channelName], 0).copy()
 
-        # Stack the images into RGB
+        # Ok now we are going to try slicing these up into more channels.
+        # We will be making some assumptions here about the amounts of red, green, and blue that will be in the image
+
+        # Here is a rough estimate of the spectral responses for each color
+        # It typically varies by camera. Future work should give the user to input these if they know them
+        # Red:      Red (1.0)   Green (0.0)     Blue (0.0)
+        # Orange:   Red (0.75)   Green (0.25)     Blue (0.0)
+        # Yellow:   Red (0.5)   Green (0.5)     Blue (0.0)
+        # Green:    Red (0.0)   Green (1.0)     Blue (0.0)
+        # Blue:     Red (0.0)   Green (0.2)     Blue (0.8)
+        # Violet:   Red (0.3)   Green (0.0)     Blue (0.7)
+
+
+        # Color weight tuples in format (r, g, b)
+        colorWeights = {}
+        colorWeights['red'] = (1.0, 0.0, 0.0)
+        colorWeights['orange'] = (0.75, 0.25, 0.0)
+        colorWeights['yellow'] = (0.5, 0.5, 0.0)
+        colorWeights['green'] = (0.0, 1.0, 0.0)
+        colorWeights['blue'] = (0.0, 0.2, 0.8)
+        colorWeights['violet'] = (0.3, 0.0, 0.7)
+
+        for color in colorWeights:
+            self.rainbowChannels[color] = self.__approximateIntermediateColors(colorWeights[color])
+
+        self.__displayRainbowColors()
+
+    
+    def __displayRainbowColors(self):
+        plt.cla()   # Clear axis
+        plt.clf()   # Clear figure
+        plt.close() # Close a figure window
+
+        # Define the custom yellow colormap
+        yellowCmap = LinearSegmentedColormap.from_list(
+            'yellows',
+            [
+                (1.0, 1.0, 1.0),            # Pure white
+                (1.0, 1.0, 0.0)    # Pure color based on colorweights
+            ],
+        )
+
+        # create figure
+        fig = plt.figure(figsize=(10, 5))
+
+        # setting values to rows and column variables
+        rows = 2
+        columns = 3
+
+        plt.suptitle(f'Approximate 6-channel Multispectral Images', fontweight = 'bold')
+        
+
+        # Adds a subplot at the 1st position
+        fig.add_subplot(rows, columns, 1)
+        
+        # showing image
+        plt.imshow(self.rainbowChannels['red'], cmap='Reds')
+        plt.axis('off')
+        plt.title("Red")
+        
+        # Adds a subplot at the 1st position
+        fig.add_subplot(rows, columns, 2)
+        
+        # showing image
+        plt.imshow(self.rainbowChannels['orange'], cmap='Oranges')
+        plt.axis('off')
+        plt.title("Orange")
+        
+        # Adds a subplot at the 1st position
+        fig.add_subplot(rows, columns, 3)
+        
+        # showing image
+        plt.imshow(self.rainbowChannels['yellow'], cmap=yellowCmap)
+        plt.axis('off')
+        plt.title("Yellow")
+        
+        # Adds a subplot at the 1st position
+        fig.add_subplot(rows, columns, 4)
+        
+        # showing image
+        plt.imshow(self.rainbowChannels['green'], cmap='Greens')
+        plt.axis('off')
+        plt.title("Green")
+
+        # Adds a subplot at the 1st position
+        fig.add_subplot(rows, columns, 5)
+        
+        # showing image
+        plt.imshow(self.rainbowChannels['blue'], cmap='Blues')
+        plt.axis('off')
+        plt.title("Blue")
+
+        # Adds a subplot at the 1st position
+        fig.add_subplot(rows, columns, 6)
+        
+        # showing image
+        plt.imshow(self.rainbowChannels['violet'], cmap='Purples')
+        plt.axis('off')
+        plt.title("Purple")
+        
+        # plt.show()
+        plt.savefig(f'{self.outputImgsFolder}\\6-channel-multispectral-approximation.png')
+        
+        
+
+    def __approximateIntermediateColors(self, colorWeights):
         greenChannel = (self.shiftedImgs['green1'] + self.shiftedImgs['green2']) / 2
-        self.__combineToRGB(self.shiftedImgs['red'], greenChannel, self.shiftedImgs['blue'])
+        return (self.shiftedImgs['red'] * colorWeights[0]) + (greenChannel * colorWeights[1]) + (self.shiftedImgs['blue'] * colorWeights[2])
+
+
+
+
+
                 
                                                 
 
