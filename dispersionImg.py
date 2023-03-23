@@ -111,17 +111,79 @@ class DispersionImg:
                 # a general use case. Eventually I asked ChatGPT and it suggested the following balance which seems to work well so far
                 # Future work will want to allow users to input the spectral response of their photosites if they happen to have it.
                 # This will serve as a 
-                # Color weight tuples in format (r, g, b)
-                self.colorWeights['red'] = (1.0, 0.0, 0.0)
-                self.colorWeights['orange'] = (0.75, 0.25, 0.0)
-                self.colorWeights['yellow'] = (0.5, 0.5, 0.0)
-                self.colorWeights['green'] = (0.0, 1.0, 0.0)
-                self.colorWeights['blue'] = (0.0, 0.2, 0.8)
-                self.colorWeights['violet'] = (0.3, 0.0, 0.7)
 
-                # Align the raw channels
-                # self.__alignRawChannels()
-                # Combine the green into one channel
+
+                # The image sensor in a Nikon D90 and Nikon D5000 are the same
+                # I was unable to find the spectral response data for the Nikon D5000, but there is a useful
+                # Researchgate paper that details the spectral response of the D90. I will use this below
+                # To get a better estimate of the colorweights
+                
+                # Color weight tuples in format (r, g, b)
+
+                self.colorWeights[400] = (0.0,   0.0,    0.0)
+                self.colorWeights[405] = (0.015, 0.005,  0.11)
+                self.colorWeights[410] = (0.02,  0.005,  0.2)
+                self.colorWeights[415] = (0.039, 0.01,   0.53)
+                self.colorWeights[420] = (0.05,  0.01,   0.42)
+                self.colorWeights[425] = (0.065, 0.015,  0.53)
+                self.colorWeights[430] = (0.08,  0.02,   0.61)
+                self.colorWeights[435] = (0.095, 0.025,  0.68)
+                self.colorWeights[440] = (0.11,  0.03,   0.73)
+                self.colorWeights[445] = (0.15,  0.034,  0.625)
+                self.colorWeights[450] = (0.105, 0.035,  0.67)
+                self.colorWeights[455] = (0.1,   0.039,  0.62)
+                self.colorWeights[460] = (0.085, 0.05,   0.595)
+                self.colorWeights[465] = (0.069, 0.085,  0.64)
+                self.colorWeights[470] = (0.035, 0.13,   0.7)
+                self.colorWeights[475] = (0.015, 0.185,  0.775)
+                self.colorWeights[480] = (0.0,   0.245,  0.815)
+                self.colorWeights[485] = (0.02,  0.345,  0.828)
+                self.colorWeights[490] = (0.04,  0.47,   0.83)
+                self.colorWeights[495] = (0.075, 0.57,   0.828)
+                self.colorWeights[500] = (0.095, 0.68,   0.8)
+                self.colorWeights[505] = (0.1,   0.74,   0.68)
+                self.colorWeights[510] = (0.09,  0.77,   0.45)
+                self.colorWeights[515] = (0.085, 0.815,  0.24)
+                self.colorWeights[520] = (0.075, 0.83,   0.075)
+                self.colorWeights[525] = (0.072, 0.815,  0.071)
+                self.colorWeights[530] = (0.07,  0.78,   0.06)
+                self.colorWeights[535] = (0.065, 0.73,   0.059)
+                self.colorWeights[540] = (0.06,  0.7,    0.06)
+                self.colorWeights[545] = (0.06,  0.705,  0.065)
+                self.colorWeights[550] = (0.06,  0.72,   0.071)
+                self.colorWeights[555] = (0.075, 0.73,   0.08)
+                self.colorWeights[560] = (0.085, 0.72,   0.08)
+                self.colorWeights[565] = (0.23,  0.655,  0.085)
+                self.colorWeights[570] = (0.44,  0.57,   0.09)
+                self.colorWeights[575] = (0.63,  0.48,   0.09)
+                self.colorWeights[580] = (0.78,  0.4,    0.09)
+                self.colorWeights[585] = (0.85,  0.325,  0.85)
+                self.colorWeights[590] = (0.915, 0.24,   0.08)
+                self.colorWeights[595] = (0.965, 0.16,   0.075)
+                self.colorWeights[600] = (0.990, 0.1,    0.072)
+                self.colorWeights[605] = (0.985, 0.085,  0.072)
+                self.colorWeights[610] = (0.965, 0.072,  0.072)
+                self.colorWeights[615] = (0.93,  0.07,   0.07)
+                self.colorWeights[620] = (0.85,  0.06,   0.07)
+                self.colorWeights[625] = (0.84,  0.05,   0.065)
+                self.colorWeights[630] = (0.77,  0.04,   0.05)
+                self.colorWeights[635] = (0.71,  0.038,  0.049)
+                self.colorWeights[640] = (0.63,  0.03,   0.04)
+                self.colorWeights[645] = (0.52,  0.028,  0.038)
+                self.colorWeights[650] = (0.44,  0.025,  0.035)
+                self.colorWeights[655] = (0.35,  0.026,  0.032)
+                self.colorWeights[660] = (0.27,  0.025,  0.029)
+                self.colorWeights[665] = (0.19,  0.021,  0.024)
+                self.colorWeights[670] = (0.13,  0.015,  0.019)
+                self.colorWeights[685] = (0.08,  0.013,  0.014)
+                self.colorWeights[680] = (0.045, 0.011,  0.009)
+                self.colorWeights[685] = (0.027, 0.009,  0.007)
+                self.colorWeights[690] = (0.015, 0.003,  0.002)
+                self.colorWeights[695] = (0.01,  0.001,  0.001)
+                self.colorWeights[700] = (0.0,   0.0,    0.0)
+
+
+                # Start sift alignment test. Aligning all layers to green1
                 print('starting sift alignment test')
                 self.__siftAlignmentTest('green1')
 
@@ -196,6 +258,14 @@ class DispersionImg:
         plt.clf()   # Clear figure
         plt.close() # Close a figure window
 
+        # Some points we will decide are the representations of these colors
+        red = 690
+        orange = 590
+        yellow = 570
+        green = 530
+        blue = 470
+        violet = 410
+
         # Define the custom yellow colormap for white to yellow because there doesn't seem to be one like for 'Blues' and 'Reds' etc
         yellowCmap = LinearSegmentedColormap.from_list(
             'yellows',
@@ -214,53 +284,41 @@ class DispersionImg:
 
         plt.suptitle(f'Approximate 6-channel Multispectral Images', fontweight = 'bold')
         
-        # Adds a subplot at the 1st position
+        # Create red plot
         fig.add_subplot(rows, columns, 1)
-        
-        # showing image
-        plt.imshow(self.sixChannelMultispectral['red'], cmap='Reds')
+        plt.imshow(self.sixChannelMultispectral[red], cmap='Reds')
         plt.axis('off')
         plt.title("Red")
         
-        # Adds a subplot at the 1st position
+        # Create orange plot
         fig.add_subplot(rows, columns, 2)
-        
-        # showing image
-        plt.imshow(self.sixChannelMultispectral['orange'], cmap='Oranges')
+        plt.imshow(self.sixChannelMultispectral[orange], cmap='Oranges')
         plt.axis('off')
         plt.title("Orange")
         
-        # Adds a subplot at the 1st position
+        # Create yellow plot
         fig.add_subplot(rows, columns, 3)
-        
-        # showing image
-        plt.imshow(self.sixChannelMultispectral['yellow'], cmap=yellowCmap)
+        plt.imshow(self.sixChannelMultispectral[yellow], cmap=yellowCmap)
         plt.axis('off')
         plt.title("Yellow")
         
-        # Adds a subplot at the 1st position
+        # Create green plot
         fig.add_subplot(rows, columns, 4)
-        
-        # showing image
-        plt.imshow(self.sixChannelMultispectral['green'], cmap='Greens')
+        plt.imshow(self.sixChannelMultispectral[green], cmap='Greens')
         plt.axis('off')
         plt.title("Green")
 
-        # Adds a subplot at the 1st position
+        # Create blue plot
         fig.add_subplot(rows, columns, 5)
-        
-        # showing image
-        plt.imshow(self.sixChannelMultispectral['blue'], cmap='Blues')
+        plt.imshow(self.sixChannelMultispectral[blue], cmap='Blues')
         plt.axis('off')
         plt.title("Blue")
 
-        # Adds a subplot at the 1st position
+        # Create violet plot
         fig.add_subplot(rows, columns, 6)
-        
-        # showing image
-        plt.imshow(self.sixChannelMultispectral['violet'], cmap='Purples')
+        plt.imshow(self.sixChannelMultispectral[violet], cmap='Purples')
         plt.axis('off')
-        plt.title("Purple")
+        plt.title("Violet")
         
         # plt.show()
         plt.savefig(f'{self.outputImgsFolder}\\6-channel-multispectral-approximation.png')
@@ -560,17 +618,19 @@ class DispersionImg:
         # Create a simple RGB image of the 3 raw channels in alignment
         self.__combineToRGB(self.shiftedImgs['red'], greenChannel, self.shiftedImgs['blue'])
 
-        self.__makeSixChannelMultispectral(self.shiftedImgs)
+        # self.__makeSixChannelMultispectral(self.shiftedImgs)
+        self.__makeHyperspectral(self.shiftedImgs)
 
     # Ok now we are going to try slicing these up into more channels.
     # We will be making some assumptions here about the amounts of red, green, and blue that will be in the image
 
-    def __makeSixChannelMultispectral(self, channelDict):
+    def __makeHyperspectral(self, channelDict):
         # Slice up the colors by weight:
-        for color in self.colorWeights:
-            self.sixChannelMultispectral[color] = self.__approximateIntermediateColors(self.colorWeights[color])
+        for wavelengthRange in self.colorWeights:
+            self.sixChannelMultispectral[wavelengthRange] = self.__approximateIntermediateColors(self.colorWeights[wavelengthRange])
 
         self.displaySixChannelMultispectral()
+
 
         
         
