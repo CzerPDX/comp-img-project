@@ -19,31 +19,35 @@ from scipy.ndimage import zoom
 from skimage import exposure
 
 
+
+
 # Takes in a rawpy-compatible Raw dispersed image
 class DispersionImg:
-    def __init__(self, imgLocation):
-        self.imgError = None                    # Whether or not there is an error in the image processing process
-        self.imgLocation = None                 # Image location on the computer
-        self.rawImg = None                      # Raw image as numpy array
-        self.parameters = None                  # Parameters taken from rawpy object
-        self.processedImg = None                # Processed image from RAW image (often creates RGB) as numpy array
-        self.processedImg_smaller = None        # Smaller raw image for processing easier as numpy array
+    def __init__(self, outputImagesFolder, imgLocation, reductionPercent, colorWeights):
+        self.imgError = None                        # Whether or not there is an error in the image processing process
+        self.imgLocation = None                     # Image location on the computer
+        self.rawImg = None                          # Raw image as numpy array
+        self.parameters = None                      # Parameters taken from rawpy object
         
-        self.rawChannels = {}                   # Will hold the raw, unaligned input from each type of image sensor separated into 1/4 size numpy arrays
-        self.rawChannels_smaller = {}           # Smaller versions of the rawChannels that makes alignment more reasonable
-        self.rawChannels_smaller_uint8 = {}     # 8-bit version of the rawChannels_smaller
-        self.manuallyDemosaicedRaw = None       #Image is demosaiced manually into each channel keeping raw values
-        self.reductionPercent = 0.5            # Percentage to reduce the raw channels by as a float
-        self.correlationValues = {}
-        self.shiftedImgs = {}
-        self.stackedTest = None
-        self.outputImgsFolder = os.path.normpath('img/v2_dispersed_output/')
-        self.rawShiftAmounts = {}               # How much to shift each raw channel image
-        self.sixChannelMultispectral = {}
-        self.colorWeights = {}                  # Color weights for RGB sensors
+        self.imgLocation = imgLocation              # Location of input image
+        self.outputImgsFolder = outputImagesFolder  # Location of output images
+
+        self.processedImg = None                    # Processed image from RAW image (often creates RGB) as numpy array
+        self.processedImg_smaller = None            # Smaller raw image for processing easier as numpy array
+        
+        self.rawChannels = {}                       # Will hold the raw, unaligned input from each type of image sensor separated into 1/4 size numpy arrays
+        self.rawChannels_smaller = {}               # Smaller versions of the rawChannels that makes alignment more reasonable
+        self.rawChannels_smaller_uint8 = {}         # 8-bit version of the rawChannels_smaller
+        self.manuallyDemosaicedRaw = None           # Image is demosaiced manually into each channel keeping raw values
+        self.reductionPercent = reductionPercent    # Percentage to reduce the raw channels by as a float
+        self.shiftedImgs = {}                       # Raw channels after shifting
+
+        self.rawShiftAmounts = {}                   # How much to shift each raw channel image
+        self.sixChannelMultispectral = {}           
+        self.colorWeights = colorWeights            # Color weight tuples in format (r, g, b). Keys accessed by nanometer
 
         # Save image information
-        self.resetImg(imgLocation)
+        self.resetImg(self.imgLocation)
 
 
     # Overwrites class data/Initializes class information
@@ -99,83 +103,12 @@ class DispersionImg:
 
                 self.rawChannels_smaller_uint8 = self.__getSmallerUint8(self.rawChannels_smaller)
 
-                # Set colorweights
-                # Did quite a lot of reading and couldn't settle on good color weights for intermediate colors that would provide
-                # a general use case. Eventually I asked ChatGPT and it suggested the following balance which seems to work well so far
-                # Future work will want to allow users to input the spectral response of their photosites if they happen to have it.
-                # This will serve as a 
-
-
                 # The image sensor in a Nikon D90 and Nikon D5000 are the same
                 # I was unable to find the spectral response data for the Nikon D5000, but there is a useful
                 # Researchgate paper that details the spectral response of the D90. I will use this below
                 # To get a better estimate of the colorweights
                 
-                # Color weight tuples in format (r, g, b)
-
-                self.colorWeights[400] = (0.0,   0.0,    0.0)
-                self.colorWeights[405] = (0.015, 0.005,  0.11)
-                self.colorWeights[410] = (0.02,  0.005,  0.2)
-                self.colorWeights[415] = (0.039, 0.01,   0.53)
-                self.colorWeights[420] = (0.05,  0.01,   0.42)
-                self.colorWeights[425] = (0.065, 0.015,  0.53)
-                self.colorWeights[430] = (0.08,  0.02,   0.61)
-                self.colorWeights[435] = (0.095, 0.025,  0.68)
-                self.colorWeights[440] = (0.11,  0.03,   0.73)
-                self.colorWeights[445] = (0.15,  0.034,  0.625)
-                self.colorWeights[450] = (0.105, 0.035,  0.67)
-                self.colorWeights[455] = (0.1,   0.039,  0.62)
-                self.colorWeights[460] = (0.085, 0.05,   0.595)
-                self.colorWeights[465] = (0.069, 0.085,  0.64)
-                self.colorWeights[470] = (0.035, 0.13,   0.7)
-                self.colorWeights[475] = (0.015, 0.185,  0.775)
-                self.colorWeights[480] = (0.0,   0.245,  0.815)
-                self.colorWeights[485] = (0.02,  0.345,  0.828)
-                self.colorWeights[490] = (0.04,  0.47,   0.83)
-                self.colorWeights[495] = (0.075, 0.57,   0.828)
-                self.colorWeights[500] = (0.095, 0.68,   0.8)
-                self.colorWeights[505] = (0.1,   0.74,   0.68)
-                self.colorWeights[510] = (0.09,  0.77,   0.45)
-                self.colorWeights[515] = (0.085, 0.815,  0.24)
-                self.colorWeights[520] = (0.075, 0.83,   0.075)
-                self.colorWeights[525] = (0.072, 0.815,  0.071)
-                self.colorWeights[530] = (0.07,  0.78,   0.06)
-                self.colorWeights[535] = (0.065, 0.73,   0.059)
-                self.colorWeights[540] = (0.06,  0.7,    0.06)
-                self.colorWeights[545] = (0.06,  0.705,  0.065)
-                self.colorWeights[550] = (0.06,  0.72,   0.071)
-                self.colorWeights[555] = (0.075, 0.73,   0.08)
-                self.colorWeights[560] = (0.085, 0.72,   0.08)
-                self.colorWeights[565] = (0.23,  0.655,  0.085)
-                self.colorWeights[570] = (0.44,  0.57,   0.09)
-                self.colorWeights[575] = (0.63,  0.48,   0.09)
-                self.colorWeights[580] = (0.78,  0.4,    0.09)
-                self.colorWeights[585] = (0.85,  0.325,  0.85)
-                self.colorWeights[590] = (0.915, 0.24,   0.08)
-                self.colorWeights[595] = (0.965, 0.16,   0.075)
-                self.colorWeights[600] = (0.990, 0.1,    0.072)
-                self.colorWeights[605] = (0.985, 0.085,  0.072)
-                self.colorWeights[610] = (0.965, 0.072,  0.072)
-                self.colorWeights[615] = (0.93,  0.07,   0.07)
-                self.colorWeights[620] = (0.85,  0.06,   0.07)
-                self.colorWeights[625] = (0.84,  0.05,   0.065)
-                self.colorWeights[630] = (0.77,  0.04,   0.05)
-                self.colorWeights[635] = (0.71,  0.038,  0.049)
-                self.colorWeights[640] = (0.63,  0.03,   0.04)
-                self.colorWeights[645] = (0.52,  0.028,  0.038)
-                self.colorWeights[650] = (0.44,  0.025,  0.035)
-                self.colorWeights[655] = (0.35,  0.026,  0.032)
-                self.colorWeights[660] = (0.27,  0.025,  0.029)
-                self.colorWeights[665] = (0.19,  0.021,  0.024)
-                self.colorWeights[670] = (0.13,  0.015,  0.019)
-                self.colorWeights[685] = (0.08,  0.013,  0.014)
-                self.colorWeights[680] = (0.045, 0.011,  0.009)
-                self.colorWeights[685] = (0.027, 0.009,  0.007)
-                self.colorWeights[690] = (0.015, 0.003,  0.002)
-                self.colorWeights[695] = (0.01,  0.001,  0.001)
-                self.colorWeights[700] = (0.0,   0.0,    0.0)
-
-
+                
                 # Start sift alignment test. Aligning all layers to green1
                 print('starting sift alignment test')
                 self.__siftAlignmentTest('green1')
