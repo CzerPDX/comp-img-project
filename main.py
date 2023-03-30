@@ -2,18 +2,7 @@ from src.dispersionImg import DispersionImg
 import os
 
 if __name__ == "__main__":
-    # Image location and name
-    imgsFolder = 'img/'
-    imgFileName = 'v2_dispersed.NEF'
-
-    # Get the paths for the operating system we're on
-    imgName = os.path.splitext(imgFileName)[0]
-    imgLocation = os.path.normpath(f'{imgsFolder}{imgFileName}')
-    outputImagesFolder = f'{imgsFolder}{imgName}_output/'
-
-    # Parameters for the program
-    reductionPercent = 0.5          # Reduced size for processing keypoints and matches
-
+    
     # Spectral response dictionary. Keys accessed by nanometer
     colorWeights = {}
     colorWeights[400] = (0.0,   0.0,    0.0)
@@ -77,10 +66,67 @@ if __name__ == "__main__":
     colorWeights[690] = (0.015, 0.003,  0.002)
     colorWeights[695] = (0.01,  0.001,  0.001)
     colorWeights[700] = (0.0,   0.0,    0.0)
-    
+
+
+    # Test a good image with broad spectral content (will provide an easier set of matches)
+    # Image location and name
+    imgsFolder = 'img/'
+    imgFileName = 'v2_dispersed.NEF'
+
+    # Get the paths for the operating system we're on
+    imgName = os.path.splitext(imgFileName)[0]
+    imgLocation = os.path.normpath(f'{imgsFolder}{imgFileName}')
+    outputImagesFolder = f'{imgsFolder}{imgName}_output/'
+
+    # Parameters for the program
+    reductionPercent = 0.5              # Reduced size for processing keypoints and matches
+    clipLimit = 1.0                     # For CLAHE contrast 
+    tileGridSize=(10, 10)               # For CLAHE contrast 
+    gaussianKernelSize = 5              # For Smoothing
+    verticalThresholdPercent = 0.01     # Vertical threshold for allowable vertical change in matches
+    horizontalThresholdPercent = 0.05   # Horizontal threshold for allowable horizontal change in matches
 
     
     dispersedImgObj = DispersionImg(outputImagesFolder, 
                                     imgLocation, 
                                     reductionPercent,
-                                    colorWeights)
+                                    colorWeights,
+                                    verticalThresholdPercent,
+                                    horizontalThresholdPercent,
+                                    gaussianKernelSize,
+                                    clipLimit,
+                                    tileGridSize
+                                    )
+
+
+
+    # Test on image with less spectral content
+    # Image location and name
+    imgsFolder = 'img/'
+    imgFileName = 'DSC_5911.NEF'
+
+    # Get the paths for the operating system we're on
+    imgName = os.path.splitext(imgFileName)[0]
+    imgLocation = os.path.normpath(f'{imgsFolder}{imgFileName}')
+    outputImagesFolder = f'{imgsFolder}{imgName}_output/'
+
+    # Parameters for the program
+    reductionPercent = 0.5              # Reduced size for processing keypoints and matches
+    clipLimit = 1.0                     # For CLAHE contrast 
+    tileGridSize=(10, 10)               # For CLAHE contrast 
+    gaussianKernelSize = 5              # For Smoothing
+    verticalThresholdPercent = 0.99     # Vertical threshold for allowable vertical change in matches
+    horizontalThresholdPercent = 0.99   # Horizontal threshold for allowable horizontal change in matches
+
+    
+    dispersedImgObj = DispersionImg(outputImagesFolder, 
+                                    imgLocation, 
+                                    reductionPercent,
+                                    colorWeights,
+                                    verticalThresholdPercent,
+                                    horizontalThresholdPercent,
+                                    gaussianKernelSize,
+                                    clipLimit,
+                                    tileGridSize
+                                    )
+    

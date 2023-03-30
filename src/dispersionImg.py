@@ -23,7 +23,17 @@ from skimage import exposure
 
 # Takes in a rawpy-compatible Raw dispersed image
 class DispersionImg:
-    def __init__(self, outputImagesFolder, imgLocation, reductionPercent, colorWeights):
+    def __init__(self, 
+                 outputImagesFolder, 
+                 imgLocation, 
+                 reductionPercent, 
+                 colorWeights,
+                 verticalThresholdPercent,
+                 horizontalThresholdPercent,
+                 gaussianKernelSize,
+                 clipLimit,
+                 tileGridSize
+                 ):
         self.imgError = None                        # Whether or not there is an error in the image processing process
         self.imgLocation = None                     # Image location on the computer
         self.rawImg = None                          # Raw image as numpy array
@@ -39,11 +49,17 @@ class DispersionImg:
         self.rawChannels_smaller = {}               # Smaller versions of the rawChannels that makes alignment more reasonable
         self.rawChannels_smaller_uint8 = {}         # 8-bit version of the rawChannels_smaller
         self.manuallyDemosaicedRaw = None           # Image is demosaiced manually into each channel keeping raw values
-        self.reductionPercent = reductionPercent    # Percentage to reduce the raw channels by as a float
         self.shiftedImgs = {}                       # Raw channels after shifting
 
+        self.reductionPercent = reductionPercent    # Percentage to reduce the raw channels by as a float
+        self.verticalThresholdPercent = verticalThresholdPercent        # Percentage as float in allowable vertical difference between keypoints matches
+        self.horizontalThresholdPercent = horizontalThresholdPercent    # Percentage as float of allowable horizontal difference between keypoint matches        
+        self.gaussianKernelSize = gaussianKernelSize
+        self.clipLimit = clipLimit
+        self.tileGridSize = tileGridSize
+
         self.rawShiftAmounts = {}                   # How much to shift each raw channel image
-        self.sixChannelMultispectral = {}           
+        self.calculatedHyperspectral = {}           
         self.colorWeights = colorWeights            # Color weight tuples in format (r, g, b). Keys accessed by nanometer
 
         # Save image information
@@ -99,7 +115,7 @@ class DispersionImg:
                 self.__manualDemosaicKeepRawData()
 
                 # Reduce the size of the demosaiced raw channels so they can be aligned more reasonably
-                self.rawChannels_smaller = self.__makeSmallerChannels(self.rawChannels)
+                self.rawChannels_smaller = self.__makeSmallerChannels(self.rawChannels, )
 
                 self.rawChannels_smaller_uint8 = self.__getSmallerUint8(self.rawChannels_smaller)
 
@@ -134,6 +150,10 @@ class DispersionImg:
             plt.title(f'Smaller processed image: {self.processedImg_smaller.shape}')
             plt.show()
 
+            plt.cla()   # Clear axis
+            plt.clf()   # Clear figure
+            plt.close() # Close a figure window
+
     def displayRawChannels(self):
         # Display the RAW data from each photosite
         # Add Green2 channel to upper left to match rgbg Bayer pattern of:
@@ -158,6 +178,10 @@ class DispersionImg:
 
         plt.show() 
 
+        plt.cla()   # Clear axis
+        plt.clf()   # Clear figure
+        plt.close() # Close a figure window
+
 
 
     # Prints all the information gathered from the image to the terminal.
@@ -177,7 +201,7 @@ class DispersionImg:
         else:
             print('Error! Unable to print image information as there was an error when loading this image has not been properly loaded')
 
-    def displaySixChannelMultispectral(self):
+    def displaycalculatedHyperspectral(self):
         # Added this because I was having issues with artifacts from previous figures.
         # This is a messy but temporary solution
         plt.cla()   # Clear axis
@@ -212,42 +236,46 @@ class DispersionImg:
         
         # Create red plot
         fig.add_subplot(rows, columns, 1)
-        plt.imshow(self.sixChannelMultispectral[red], cmap='Reds')
+        plt.imshow(self.calculatedHyperspectral[red], cmap='Reds')
         plt.axis('off')
         plt.title("Red")
         
         # Create orange plot
         fig.add_subplot(rows, columns, 2)
-        plt.imshow(self.sixChannelMultispectral[orange], cmap='Oranges')
+        plt.imshow(self.calculatedHyperspectral[orange], cmap='Oranges')
         plt.axis('off')
         plt.title("Orange")
         
         # Create yellow plot
         fig.add_subplot(rows, columns, 3)
-        plt.imshow(self.sixChannelMultispectral[yellow], cmap=yellowCmap)
+        plt.imshow(self.calculatedHyperspectral[yellow], cmap=yellowCmap)
         plt.axis('off')
         plt.title("Yellow")
         
         # Create green plot
         fig.add_subplot(rows, columns, 4)
-        plt.imshow(self.sixChannelMultispectral[green], cmap='Greens')
+        plt.imshow(self.calculatedHyperspectral[green], cmap='Greens')
         plt.axis('off')
         plt.title("Green")
 
         # Create blue plot
         fig.add_subplot(rows, columns, 5)
-        plt.imshow(self.sixChannelMultispectral[blue], cmap='Blues')
+        plt.imshow(self.calculatedHyperspectral[blue], cmap='Blues')
         plt.axis('off')
         plt.title("Blue")
 
         # Create violet plot
         fig.add_subplot(rows, columns, 6)
-        plt.imshow(self.sixChannelMultispectral[violet], cmap='Purples')
+        plt.imshow(self.calculatedHyperspectral[violet], cmap='Purples')
         plt.axis('off')
         plt.title("Violet")
         
         # plt.show()
         plt.savefig(f'{self.outputImgsFolder}\\6-channel-multispectral-approximation.png')
+
+        plt.cla()   # Clear axis
+        plt.clf()   # Clear figure
+        plt.close() # Close a figure window
 
 
     # Private Methods ################################
@@ -300,12 +328,11 @@ class DispersionImg:
                 # Increase the contrast to allow better alignment in future steps
                 # clipLimit = 2.0 means the contrast is limited to twice the original contrast
                 # tileGridSize
-                contrastSettings = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(10, 10))
+                contrastSettings = cv2.createCLAHE(clipLimit=self.clipLimit, tileGridSize=self.tileGridSize)
                 contrastedImg = contrastSettings.apply(smallerSize)
 
                 #Now smooth it a little to reduce noise
-                kernelSize = 3
-                smoothedImg = cv2.GaussianBlur(contrastedImg, (kernelSize, kernelSize), 0)
+                smoothedImg = cv2.GaussianBlur(contrastedImg, (self.gaussianKernelSize, self.gaussianKernelSize), 0)
 
                 channelsDict_smaller[channel] = smoothedImg
         except Exception as err:
@@ -333,41 +360,41 @@ class DispersionImg:
             # match[1].trainIdx = index of the second-nearest neighbor matched point from keypoints2
             # Use the above to dereference the keypoints1 and keypoints2
 
-            # First perform Lowe's ratio test
-            if match[0].distance < (ratioThreshold * match[1].distance):
+            # # First perform Lowe's ratio test
+            # if match[0].distance < (ratioThreshold * match[1].distance):
                 
-                pt1 = keypoints1[match[0].queryIdx].pt
-                nearestNeighborTo_pt1 = keypoints2[match[0].trainIdx].pt         # Nearest neighbor to pt1
-                secondNearestNeighborTo_pt1 = keypoints2[match[1].trainIdx].pt   # Second nearest neighbor to pt1
+            pt1 = keypoints1[match[0].queryIdx].pt
+            nearestNeighborTo_pt1 = keypoints2[match[0].trainIdx].pt         # Nearest neighbor to pt1
+            # secondNearestNeighborTo_pt1 = keypoints2[match[1].trainIdx].pt   # Second nearest neighbor to pt1
 
-                # Get the vertical displacement between the keypoints
-                # Displacement between point1 and nearestNeighborTo_pt1 
-                displacement_y1 = pt1[1] - nearestNeighborTo_pt1[1]   
-                # Displacement between point1 and secondNearestNeighborTo_pt1
-                displacement_y2 = pt1[1] - secondNearestNeighborTo_pt1[1]
+            # Get the vertical displacement between the keypoints
+            # Displacement between point1 and nearestNeighborTo_pt1 
+            displacement_y1 = pt1[1] - nearestNeighborTo_pt1[1]   
+            # Displacement between point1 and secondNearestNeighborTo_pt1
+            # displacement_y2 = pt1[1] - secondNearestNeighborTo_pt1[1]
 
-                # Displacement between point1 and nearestNeighborTo_pt1 
-                displacement_x1 = pt1[0] - nearestNeighborTo_pt1[0]
-                # Displacement between point1 and secondNearestNeighborTo_pt1
-                displacement_x2 = pt1[0] - secondNearestNeighborTo_pt1[0]
-                
-       
-                absDisplacement_x1 = abs(displacement_x1)
-                absDisplacement_x2 = abs(displacement_x2)
-                absDisplacement_y1 = abs(displacement_y1)
-                absDisplacement_y2 = abs(displacement_y2)
-                maxVerticalDisp = (verticalThresholdPercent * imgShape[0])
-                maxHorizontalDisp = (horizontalThresholdPercent * imgShape[1])
-                # Figure out if the match is vertically similar enough to go on our goodMatches list
-                # If both y1 and y2 displacements are less than the allowed percentage of the image height, it will be considered a good match
-                if (absDisplacement_y1 < maxVerticalDisp) and (absDisplacement_y2 < maxVerticalDisp):
-                    # Now figure out if the matches are horizontally similar enough
-                    if (absDisplacement_x1 < maxHorizontalDisp) and (absDisplacement_x2 < maxHorizontalDisp):
-                        appendMatch = True
+            # Displacement between point1 and nearestNeighborTo_pt1 
+            displacement_x1 = pt1[0] - nearestNeighborTo_pt1[0]
+            # Displacement between point1 and secondNearestNeighborTo_pt1
+            # displacement_x2 = pt1[0] - secondNearestNeighborTo_pt1[0]
+            
+    
+            absDisplacement_x1 = abs(displacement_x1)
+            # absDisplacement_x2 = abs(displacement_x2)
+            absDisplacement_y1 = abs(displacement_y1)
+            # absDisplacement_y2 = abs(displacement_y2)
+            maxVerticalDisp = (verticalThresholdPercent * imgShape[0])
+            maxHorizontalDisp = (horizontalThresholdPercent * imgShape[1])
+            # Figure out if the match is vertically similar enough to go on our goodMatches list
+            # If both y1 and y2 displacements are less than the allowed percentage of the image height, it will be considered a good match
+            if (absDisplacement_y1 < maxVerticalDisp):
+                # Now figure out if the matches are horizontally similar enough
+                if (absDisplacement_x1 < maxHorizontalDisp):
+                    appendMatch = True
                         
             # Only append if it's good enough to append
             if (appendMatch):
-                goodMatches.append((match[0], match[1])) 
+                goodMatches.append((match[0], match[0])) 
                 appendMatch = False
 
         return goodMatches
@@ -436,7 +463,7 @@ class DispersionImg:
 
         # If there are no entries in intArray
         if len(intArray) < 1:
-            raise ValueError(f'Error! No entries in the intArray')
+            raise Exception(f'Error! No entries in the intArray')
         # Otherwise there is at least 1 entry so start counting!
         else:
             for number in intArray:
@@ -529,11 +556,11 @@ class DispersionImg:
                                                                                 keypointsAndDescriptors[channelName][0],
                                                                                 keypointsAndDescriptors[channelName][1])
         # # SIMPLY FOR TESTING FOR THE LOVE OF GOD PLS REMOVE THIS
-        # self.rawShiftAmounts['red'] = (4, 0)
-        # self.rawShiftAmounts['green1'] = (0, 0)
+        # self.rawShiftAmounts['red'] = (self.rawShiftAmounts['red'][0], 0)
+        # self.rawShiftAmounts['green1'] = (self.rawShiftAmounts['green1'][0], 0)
 
-        # self.rawShiftAmounts['green2'] = (0, 0)
-        # self.rawShiftAmounts['blue'] = (-10, 0)
+        # self.rawShiftAmounts['green2'] = (self.rawShiftAmounts['green2'][0], 0)
+        # self.rawShiftAmounts['blue'] = (self.rawShiftAmounts['blue'][0], 0)
 
         # Shift each raw channel by (col, row)/(x, y) in self.rawShiftAmounts[channelName]
         for channelName in self.rawShiftAmounts:
@@ -544,7 +571,7 @@ class DispersionImg:
         # Create a simple RGB image of the 3 raw channels in alignment
         self.__combineToRGB(self.shiftedImgs['red'], greenChannel, self.shiftedImgs['blue'])
 
-        # self.__makeSixChannelMultispectral(self.shiftedImgs)
+        # self.__makecalculatedHyperspectral(self.shiftedImgs)
         self.__makeHyperspectral(self.shiftedImgs)
 
     # Ok now we are going to try slicing these up into more channels.
@@ -553,9 +580,9 @@ class DispersionImg:
     def __makeHyperspectral(self, channelDict):
         # Slice up the colors by weight:
         for wavelengthRange in self.colorWeights:
-            self.sixChannelMultispectral[wavelengthRange] = self.__approximateIntermediateColors(self.colorWeights[wavelengthRange])
+            self.calculatedHyperspectral[wavelengthRange] = self.__approximateIntermediateColors(self.colorWeights[wavelengthRange])
 
-        self.displaySixChannelMultispectral()
+        self.displaycalculatedHyperspectral()
 
 
         
@@ -563,14 +590,7 @@ class DispersionImg:
     # Gets a 6-channel multispectral approximation
     def __approximateIntermediateColors(self, colorWeights):
         greenChannel = (self.shiftedImgs['green1'] + self.shiftedImgs['green2']) / 2
-        return (self.shiftedImgs['red'] * colorWeights[0]) + (greenChannel * colorWeights[1]) + (self.shiftedImgs['blue'] * colorWeights[2])
-    
-
-    # Works off of 6-channel multispectral approximation to create hyperspectral image
-
-    
-
-                                                
+        return (self.shiftedImgs['red'] * colorWeights[0]) + (greenChannel * colorWeights[1]) + (self.shiftedImgs['blue'] * colorWeights[2])       
 
     def _getShiftValues_sift(self,
                             flannMatcher,
@@ -584,19 +604,17 @@ class DispersionImg:
                             descriptors_shiftChannel):
         # Get the matches between the descriptors of the main channel and the shift channel
         # Matches come back as (col, row) aka (x, y) from the flannMatcher
-        matches = flannMatcher.knnMatch(descriptors_mainChannel, descriptors_shiftChannel, k=2)
+        matches = flannMatcher.knnMatch(descriptors_mainChannel, descriptors_shiftChannel, k=1)
 
         # Filter out any matches that are too vertically or horizontally dissimilar.
         # Vertical threshold can be much lower because the dispersion from our prism is assumed to be in the x-direction.
         # Horizontal threshold can also be low, but not as low. The x-direction dispersion will not be terribly large
-        verticalThresholdPercent = 0.01         # Percentage as float in allowable vertical difference between keypoints matches
-        horizontalThresholdPercent = 0.05        # Percentage as float of allowable horizontal difference between keypoint matches
         matches_filtered = self.__maskMatches(mainChannelImg_smaller_uint8.shape,
                                               matches,
                                               keypoints_mainChannel,
                                               keypoints_shiftChannel,
-                                              verticalThresholdPercent,
-                                              horizontalThresholdPercent)
+                                              self.verticalThresholdPercent,
+                                              self.horizontalThresholdPercent)
         
         # Visualize the matches made between main and shift channels as an image and save to a file
         matchImg = cv2.drawMatchesKnn(mainChannelImg_smaller_uint8,
@@ -609,6 +627,10 @@ class DispersionImg:
         plt.imshow(matchImg)
         plt.title(f'{mainChannelName} to {shiftChannelName} points')
         plt.savefig(f'{self.outputImgsFolder}\{mainChannelName}_{shiftChannelName}_matches.png')
+
+        plt.cla()   # Clear axis
+        plt.clf()   # Clear figure
+        plt.close() # Close a figure window
 
         
         return self.__getKeypointShiftValues(matches_filtered, keypoints_mainChannel, keypoints_shiftChannel)
@@ -631,6 +653,10 @@ class DispersionImg:
         plt.title(f'3-Channel image stacked to RGB')
         plt.imshow(stackedRGB)
         plt.savefig(f'{self.outputImgsFolder}\\3-channel-stacked-RGB.png')
+
+        plt.cla()   # Clear axis
+        plt.clf()   # Clear figure
+        plt.close() # Close a figure window
 
         
     # Takes a numpy image to shift and shiftValues as a tuple with (col, row) format
