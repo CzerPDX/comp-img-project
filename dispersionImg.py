@@ -15,19 +15,13 @@ import cv2
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 import os
-import math
-from scipy import signal
-from scipy import datasets
-from scipy import stats as st
-from tqdm import tqdm
 from scipy.ndimage import zoom
 from skimage import exposure
-import collections
 
 
 # Takes in a rawpy-compatible Raw dispersed image
 class DispersionImg:
-    def __init__(self, imgLocation, maxDimensionPx):
+    def __init__(self, imgLocation):
         self.imgError = None                    # Whether or not there is an error in the image processing process
         self.imgLocation = None                 # Image location on the computer
         self.rawImg = None                      # Raw image as numpy array
@@ -35,7 +29,6 @@ class DispersionImg:
         self.processedImg = None                # Processed image from RAW image (often creates RGB) as numpy array
         self.processedImg_smaller = None        # Smaller raw image for processing easier as numpy array
         
-        self.maxDimensionPx = maxDimensionPx    # Max in either dimension for smaller image
         self.rawChannels = {}                   # Will hold the raw, unaligned input from each type of image sensor separated into 1/4 size numpy arrays
         self.rawChannels_smaller = {}           # Smaller versions of the rawChannels that makes alignment more reasonable
         self.rawChannels_smaller_uint8 = {}     # 8-bit version of the rawChannels_smaller
@@ -723,18 +716,4 @@ class DispersionImg:
         shiftedImg = np.roll(shiftedImg, shift=colShift, axis=colAxis)
 
         return shiftedImg
-
     
-
-def testDispersionImg():
-    imgLocation = 'img/v2_dispersed.NEF'
-    
-    dispersedImgObj = DispersionImg(imgLocation, 512)
-    # dispersedImgObj.printImageInformation()
-
-    # dispersedImgObj.displayRawChannels()
-
-
-
-
-testDispersionImg()
