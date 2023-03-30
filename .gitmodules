@@ -1,6 +1,3 @@
-[submodule "Hyperspectral-Image-Reconstruction"]
-	path = Hyperspectral-Image-Reconstruction
-	url = git@github.com:CzerPDX/Hyperspectral-Image-Reconstruction.git
 [submodule "libs/pyradi"]
 	path = libs/pyradi
 	url = https://github.com/NelisW/pyradi.git
