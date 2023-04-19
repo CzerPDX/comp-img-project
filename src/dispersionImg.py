@@ -293,7 +293,7 @@ class DispersionImg:
             retImg = cv2.resize(self.processedImg, (width, height), interpolation=cv2.INTER_AREA)
             print(f'Image successfully reduced to size ({height}, {width})')
         except Exception as err:
-            raise(f'Error! Could not reduce size of processed image: {err}')
+            raise Exception(f'Error! Could not reduce size of processed image: {err}')
         
         
         return retImg
@@ -437,19 +437,11 @@ class DispersionImg:
             raise Exception(f'Error! Failed to get keypoint shift values:\n{err}')
         
         # Then find the value that occurs most in each direction
-
-        # x direction / cols
         try:
             shiftAmt_col = int(self.__getMostCommonOrMediumValue(shiftValues_col) * (1 / (self.reductionPercent)))
-        except Exception as err:
-            raise(f'No value appeared more than once in the x-direction. Try udpating the SIFT parameters to be more permissive.')
-        
-        
-        # y direction / rows
-        try:
             shiftAmt_row = int(self.__getMostCommonOrMediumValue(shiftValues_row) * (1 / (self.reductionPercent)))
         except Exception as err:
-            raise(f'No value appeared more than once in the x-direction. Try udpating the SIFT parameters to be more permissive.')
+            raise Exception(f'No matches. Try udpating the SIFT parameters to be more permissive.')
 
         
         # Return (col, row)/(x, y) shift
