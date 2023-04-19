@@ -115,8 +115,8 @@ if __name__ == "__main__":
     clipLimit = 1.0                     # For CLAHE contrast 
     tileGridSize=(10, 10)               # For CLAHE contrast 
     gaussianKernelSize = 5              # For Smoothing
-    verticalThresholdPercent = 0.99     # Vertical threshold for allowable vertical change in matches
-    horizontalThresholdPercent = 0.99   # Horizontal threshold for allowable horizontal change in matches
+    verticalThresholdPercent = 0.01     # Vertical threshold for allowable vertical change in matches
+    horizontalThresholdPercent = 0.05   # Horizontal threshold for allowable horizontal change in matches
 
     
     dispersedImgObj = DispersionImg(outputImagesFolder, 
