@@ -100,33 +100,32 @@ if __name__ == "__main__":
 
 
 
-    # Test on image with less spectral content
-    # Image location and name
-    imgsFolder = 'img/'
-    imgFileName = 'DSC_5911.NEF'
+    # # Test on image with less spectral content
+    # # Image location and name
+    # imgsFolder = 'img/'
 
-    # Get the paths for the operating system we're on
-    imgName = os.path.splitext(imgFileName)[0]
-    imgLocation = os.path.normpath(f'{imgsFolder}{imgFileName}')
-    outputImagesFolder = f'{imgsFolder}{imgName}_output/'
+    # # Get the paths for the operating system we're on
+    # imgName = os.path.splitext(imgFileName)[0]
+    # imgLocation = os.path.normpath(f'{imgsFolder}{imgFileName}')
+    # outputImagesFolder = f'{imgsFolder}{imgName}_output/'
 
-    # Parameters for the program
-    reductionPercent = 0.5              # Reduced size for processing keypoints and matches
-    clipLimit = 1.0                     # For CLAHE contrast 
-    tileGridSize=(10, 10)               # For CLAHE contrast 
-    gaussianKernelSize = 5              # For Smoothing
-    verticalThresholdPercent = 0.01     # Vertical threshold for allowable vertical change in matches
-    horizontalThresholdPercent = 0.05   # Horizontal threshold for allowable horizontal change in matches
+    # # Parameters for the program
+    # reductionPercent = 0.5              # Reduced size for processing keypoints and matches
+    # clipLimit = 1.0                     # For CLAHE contrast 
+    # tileGridSize=(10, 10)               # For CLAHE contrast 
+    # gaussianKernelSize = 5              # For Smoothing
+    # verticalThresholdPercent = 0.01     # Vertical threshold for allowable vertical change in matches
+    # horizontalThresholdPercent = 0.05   # Horizontal threshold for allowable horizontal change in matches
 
     
-    dispersedImgObj = DispersionImg(outputImagesFolder, 
-                                    imgLocation, 
-                                    reductionPercent,
-                                    colorWeights,
-                                    verticalThresholdPercent,
-                                    horizontalThresholdPercent,
-                                    gaussianKernelSize,
-                                    clipLimit,
-                                    tileGridSize
-                                    )
+    # dispersedImgObj = DispersionImg(outputImagesFolder, 
+    #                                 imgLocation, 
+    #                                 reductionPercent,
+    #                                 colorWeights,
+    #                                 verticalThresholdPercent,
+    #                                 horizontalThresholdPercent,
+    #                                 gaussianKernelSize,
+    #                                 clipLimit,
+    #                                 tileGridSize
+    #                                 )
     
