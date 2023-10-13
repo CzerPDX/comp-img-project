@@ -1,4 +1,4 @@
-# Hyperspectral Image Undispersion Tool
+# Hyperspectral Approximation and Alignment Tool
 
 This software allows the user to take a raw NEF file from a Nikon D5000 that has been dispersed through a prism. Using the spectral response of that camera's particular CMOS sense as a parameter, the `dispersionImg` class will align the content and then provide an approximation of the hyperspectral content of the scene without the need for a diffraction grating or hyperspectral sensor.
 
